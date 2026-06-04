@@ -56,6 +56,12 @@ describe('Task Routes', () => {
   })
 
   describe('GET /api/tasks/:id', () => {
+    it('should return 400 for invalid UUID', async () => {
+      const res = await request(app).get('/api/tasks/not-a-uuid')
+      expect(res.status).toBe(400)
+      expect(res.body.errors.id).toBeDefined()
+    })
+
     it('should return a task with 200', async () => {
       jest.spyOn(TaskService, 'getTaskById').mockResolvedValue(mockTask)
 

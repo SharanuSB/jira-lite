@@ -37,7 +37,9 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true)
       setError(null)
       const response = await TaskApi.getTasks({
-        ...filters,
+        status: filters.status,
+        page: filters.page,
+        limit: filters.limit,
         search: debouncedSearch,
       })
       const data: PaginatedResponse<Task> = response.data
@@ -49,7 +51,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false)
     }
-  }, [filters, debouncedSearch])
+  }, [filters.status, filters.page, filters.limit, debouncedSearch])
 
   useEffect(() => {
     fetchTasks()
