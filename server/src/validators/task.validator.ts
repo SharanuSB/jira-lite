@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+export const uuidParamSchema = z.object({
+  id: z.string().uuid('Invalid UUID format'),
+});
+
 export const createTaskSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   description: z.string().optional(),

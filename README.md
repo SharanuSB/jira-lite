@@ -1,0 +1,189 @@
+# Jira Lite — Mini Task Management System
+
+A full-stack task management app built with React, Node.js/Express, and PostgreSQL.
+
+---
+
+## Tech Stack
+
+| Layer | Tech |
+|---|---|
+| Frontend | React 19, TypeScript, Tailwind CSS, Vite |
+| Backend | Node.js, Express, TypeScript |
+| Database | PostgreSQL 16 |
+| Validation | Zod |
+| Testing | Jest + Supertest (backend), Vitest + React Testing Library (frontend) |
+| Shared Types | Monorepo workspace (`@jira-lite/shared`) |
+
+---
+
+## Project Structure
+
+```
+jira-lite/
+├── client/          # React frontend
+├── server/          # Express backend
+├── shared/          # Shared TypeScript types and constants
+└── docker-compose.yml
+```
+
+---
+
+## Prerequisites
+
+Make sure you have these installed:
+
+- [Node.js](https://nodejs.org/) v18+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+
+---
+
+## Getting Started
+
+### 1. Clone the repo
+
+```bash
+git clone <repo-url>
+cd jira-lite
+```
+
+### 2. Start the database
+
+```bash
+docker compose up -d
+```
+
+This starts a PostgreSQL database on port `5432`.
+
+### 3. Set up the backend
+
+```bash
+cd server
+cp .env.example .env
+npm install
+npm run migrate
+npm run dev
+```
+
+Backend runs at: `http://localhost:5000`
+
+### 4. Set up the frontend
+
+Open a new terminal tab:
+
+```bash
+cd client
+npm install
+npm run dev
+```
+
+Frontend runs at: `http://localhost:5173`
+
+---
+
+## Environment Variables
+
+The `server/.env` file (copied from `.env.example`) contains:
+
+```
+PORT=5000
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=jira_lite
+NODE_ENV=development
+```
+
+---
+
+## API Endpoints
+
+Base URL: `http://localhost:5000/api`
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/tasks` | Get all tasks (paginated) |
+| GET | `/tasks/:id` | Get a single task |
+| POST | `/tasks` | Create a new task |
+| PUT | `/tasks/:id` | Update a task |
+| DELETE | `/tasks/:id` | Delete a task |
+
+### Query Parameters for GET `/tasks`
+
+| Param | Type | Description |
+|---|---|---|
+| `page` | number | Page number (default: 1) |
+| `limit` | number | Items per page (default: 10, max: 100) |
+| `status` | string | Filter by `todo`, `in_progress`, or `done` |
+| `search` | string | Search by task title |
+
+---
+
+## Running Tests
+
+### Backend
+
+```bash
+cd server
+npm test
+```
+
+### Frontend
+
+```bash
+cd client
+npm test
+```
+
+---
+
+## Features
+
+- **CRUD** — Create, view, edit and delete tasks
+- **Filters** — Filter tasks by status, search by title (debounced)
+- **Pagination** — Server-side pagination, 10 tasks per page
+- **Validation** — Zod validation on all inputs, UUID validation on route params
+- **Error Handling** — Proper 400/404/500 responses, user-friendly error messages
+- **Retry Logic** — Auto-retries failed API calls with exponential backoff
+- **Rate Limiting** — 100 requests per IP per 15 minutes
+- **Request Logging** — Morgan logs all HTTP requests in the terminal
+- **Toast Notifications** — Success/error toasts on all actions
+- **Shared Types** — Frontend and backend share the same TypeScript types via `@jira-lite/shared`
+
+---
+
+## Database Schema
+
+```sql
+CREATE TABLE tasks (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title       VARCHAR(255) NOT NULL,
+  description TEXT,
+  status      VARCHAR(50) NOT NULL DEFAULT 'todo',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+Indexes on `status`, `created_at`, and full-text search on `title`.
+
+---
+
+## Architecture
+
+### Backend follows Controller → Service → Repository pattern
+
+```
+Request → Route → Middleware (validation) → Controller → Service → Repository → DB
+```
+
+- **Controller** — handles HTTP request/response
+- **Service** — business logic (throws NotFoundError when needed)
+- **Repository** — all SQL queries live here
+
+### Frontend uses Context API for state
+
+```
+TaskContext → fetchTasks (with retry) → Axios (with interceptor) → Backend API
+```
