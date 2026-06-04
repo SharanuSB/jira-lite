@@ -15,9 +15,20 @@ interface TaskContextType {
   createTask: (dto: CreateTaskDto) => Promise<void>
   updateTask: (id: string, dto: UpdateTaskDto) => Promise<void>
   deleteTask: (id: string) => Promise<void>
+  retryFetch: () => void
 }
 
 const TaskContext = createContext<TaskContextType | null>(null)
+
+const withRetry = async <T,>(fn: () => Promise<T>, retries = 2, delay = 1000): Promise<T> => {
+  try {
+    return await fn()
+  } catch (err) {
+    if (retries === 0) throw err
+    await new Promise(r => setTimeout(r, delay))
+    return withRetry(fn, retries - 1, delay * 2)
+  }
+}
 
 export const TaskProvider = ({ children }: { children: ReactNode }) => {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -36,18 +47,18 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true)
       setError(null)
-      const response = await TaskApi.getTasks({
+      const response = await withRetry(() => TaskApi.getTasks({
         status: filters.status,
         page: filters.page,
         limit: filters.limit,
         search: debouncedSearch,
-      })
+      }))
       const data: PaginatedResponse<Task> = response.data
       setTasks(data.data)
       setTotal(data.total)
       setTotalPages(data.totalPages)
-    } catch (err) {
-      setError('Failed to fetch tasks')
+    } catch {
+      setError('Unable to reach the server. Please check your connection.')
     } finally {
       setLoading(false)
     }
@@ -63,30 +74,18 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const createTask = async (dto: CreateTaskDto) => {
-    try {
-      await TaskApi.createTask(dto)
-      await fetchTasks()
-    } catch (err) {
-      throw new Error('Failed to create task')
-    }
+    await TaskApi.createTask(dto)
+    await fetchTasks()
   }
 
   const updateTask = async (id: string, dto: UpdateTaskDto) => {
-    try {
-      await TaskApi.updateTask(id, dto)
-      await fetchTasks()
-    } catch (err) {
-      throw new Error('Failed to update task')
-    }
+    await TaskApi.updateTask(id, dto)
+    await fetchTasks()
   }
 
   const deleteTask = async (id: string) => {
-    try {
-      await TaskApi.deleteTask(id)
-      await fetchTasks()
-    } catch (err) {
-      throw new Error('Failed to delete task')
-    }
+    await TaskApi.deleteTask(id)
+    await fetchTasks()
   }
 
   return (
@@ -102,6 +101,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       createTask,
       updateTask,
       deleteTask,
+      retryFetch: fetchTasks,
     }}>
       {children}
     </TaskContext.Provider>

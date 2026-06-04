@@ -6,7 +6,7 @@ import TaskForm from './TaskForm'
 import TaskFilters from './TaskFilters'
 
 const TaskList = () => {
-  const { tasks, loading, error, page, totalPages, total, setFilters } = useTaskContext()
+  const { tasks, loading, error, page, totalPages, total, setFilters, retryFetch } = useTaskContext()
   const [showForm, setShowForm] = useState(false)
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null)
 
@@ -47,11 +47,19 @@ const TaskList = () => {
 
       {/* Error banner */}
       {error && (
-        <div className="shrink-0 flex items-center gap-2 bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm border border-red-100">
-          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          {error}
+        <div className="shrink-0 flex items-center justify-between gap-2 bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm border border-red-100">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {error}
+          </div>
+          <button
+            onClick={retryFetch}
+            className="shrink-0 text-xs font-medium underline hover:no-underline"
+          >
+            Retry
+          </button>
         </div>
       )}
 
