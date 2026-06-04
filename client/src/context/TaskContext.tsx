@@ -58,7 +58,8 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchTasks])
 
   const setFilters = (newFilters: Partial<TaskFilters>) => {
-    setFiltersState(prev => ({ ...prev, ...newFilters, page: 1 }))
+    const isPageChange = 'page' in newFilters
+    setFiltersState(prev => ({ ...prev, ...newFilters, ...(isPageChange ? {} : { page: 1 }) }))
   }
 
   const createTask = async (dto: CreateTaskDto) => {
