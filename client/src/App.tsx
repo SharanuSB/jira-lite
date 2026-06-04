@@ -1,3 +1,4 @@
+import { Toaster } from 'react-hot-toast'
 import { TaskProvider } from './context/TaskContext'
 import TaskList from './components/TaskList'
 
@@ -19,6 +20,7 @@ const App = () => {
           <TaskList />
         </div>
       </div>
+      <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
     </TaskProvider>
   )
 }

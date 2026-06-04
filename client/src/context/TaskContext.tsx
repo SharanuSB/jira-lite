@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import toast from 'react-hot-toast'
 import type { Task, TaskFilters, CreateTaskDto, UpdateTaskDto, PaginatedResponse } from '../types/task.types'
 import * as TaskApi from '../api/tasks'
 import { useDebounce } from '../hooks/useDebounce'
@@ -58,7 +59,9 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       setTotal(data.total)
       setTotalPages(data.totalPages)
     } catch {
-      setError('Unable to reach the server. Please check your connection.')
+      const msg = 'Unable to reach the server. Please check your connection.'
+      setError(msg)
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -76,16 +79,19 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   const createTask = async (dto: CreateTaskDto) => {
     await TaskApi.createTask(dto)
     await fetchTasks()
+    toast.success('Task created')
   }
 
   const updateTask = async (id: string, dto: UpdateTaskDto) => {
     await TaskApi.updateTask(id, dto)
     await fetchTasks()
+    toast.success('Task updated')
   }
 
   const deleteTask = async (id: string) => {
     await TaskApi.deleteTask(id)
     await fetchTasks()
+    toast.success('Task deleted')
   }
 
   return (
