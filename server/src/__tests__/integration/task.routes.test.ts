@@ -5,8 +5,11 @@ import { NotFoundError } from '../../utils/errors'
 
 jest.mock('../../services/task.service')
 
+const VALID_UUID = '123e4567-e89b-12d3-a456-426614174000'
+const OTHER_UUID = '999e4567-e89b-12d3-a456-426614174999'
+
 const mockTask = {
-  id: '123e4567-e89b-12d3-a456-426614174000',
+  id: VALID_UUID,
   title: 'Test Task',
   description: 'Test Description',
   status: 'todo' as const,
@@ -74,7 +77,7 @@ describe('Task Routes', () => {
     it('should return 404 when task not found', async () => {
       jest.spyOn(TaskService, 'getTaskById').mockRejectedValue(new NotFoundError())
 
-      const res = await request(app).get('/api/tasks/non-existent-id')
+      const res = await request(app).get(`/api/tasks/${OTHER_UUID}`)
 
       expect(res.status).toBe(404)
     })
@@ -118,7 +121,7 @@ describe('Task Routes', () => {
       jest.spyOn(TaskService, 'updateTask').mockRejectedValue(new NotFoundError())
 
       const res = await request(app)
-        .put('/api/tasks/non-existent-id')
+        .put(`/api/tasks/${OTHER_UUID}`)
         .send({ title: 'Updated' })
 
       expect(res.status).toBe(404)
@@ -137,7 +140,7 @@ describe('Task Routes', () => {
     it('should return 404 when task not found', async () => {
       jest.spyOn(TaskService, 'deleteTask').mockRejectedValue(new NotFoundError())
 
-      const res = await request(app).delete('/api/tasks/non-existent-id')
+      const res = await request(app).delete(`/api/tasks/${OTHER_UUID}`)
 
       expect(res.status).toBe(404)
     })
