@@ -117,7 +117,6 @@ Base URL: `http://localhost:5000/api`
 | `page` | number | Page number (default: 1) |
 | `limit` | number | Items per page (default: 10, max: 100) |
 | `status` | string | Filter by `todo`, `in_progress`, or `done` |
-| `priority` | string | Filter by `low`, `medium`, or `high` |
 | `search` | string | Search by task title |
 
 ---
@@ -143,8 +142,7 @@ npm test
 ## Features
 
 - **CRUD** — Create, view, edit and delete tasks
-- **Priority** — Tasks have low / medium / high priority levels
-- **Filters** — Filter by status, search by title (debounced), filter by priority
+- **Filters** — Filter by status, search by title (debounced)
 - **Pagination** — Server-side pagination, 10 tasks per page
 - **Validation** — Zod validation on all inputs, UUID validation on route params
 - **Error Handling** — Proper 400/404/500 responses, user-friendly error messages
@@ -196,13 +194,12 @@ CREATE TABLE tasks (
   title       VARCHAR(255) NOT NULL,
   description TEXT,
   status      VARCHAR(50) NOT NULL DEFAULT 'todo',
-  priority    VARCHAR(50) NOT NULL DEFAULT 'medium',
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
-Indexes on `status`, `priority`, `created_at`, and GIN full-text index on `title`.
+Indexes on `status`, `created_at`, and GIN full-text index on `title`.
 
 ### Migrations
 
