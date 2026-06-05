@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import type { Task, TaskFilters, CreateTaskDto, UpdateTaskDto, PaginatedResponse } from '../types/task.types'
 import * as TaskApi from '../api/tasks'
@@ -44,6 +44,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     }).then(r => r.data),
     staleTime: 30000,
     retry: 2,
+    placeholderData: keepPreviousData,
   })
 
   if (error) toast.error('Unable to reach the server. Please check your connection.')
@@ -53,19 +54,16 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   const createMutation = useMutation({
     mutationFn: (dto: CreateTaskDto) => TaskApi.createTask(dto),
     onSuccess: () => { invalidate(); toast.success('Task created') },
-    onError: (err: Error) => { throw err },
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: UpdateTaskDto }) => TaskApi.updateTask(id, dto),
     onSuccess: () => { invalidate(); toast.success('Task updated') },
-    onError: (err: Error) => { throw err },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => TaskApi.deleteTask(id),
     onSuccess: () => { invalidate(); toast.success('Task deleted') },
-    onError: (err: Error) => { throw err },
   })
 
   const setFilters = (newFilters: Partial<TaskFilters>) => {
