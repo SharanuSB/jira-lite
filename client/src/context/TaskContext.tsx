@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import type { Task, TaskFilters, CreateTaskDto, UpdateTaskDto, PaginatedResponse } from '../types/task.types'
 import * as TaskApi from '../api/tasks'
@@ -21,22 +22,9 @@ interface TaskContextType {
 
 const TaskContext = createContext<TaskContextType | null>(null)
 
-const withRetry = async <T,>(fn: () => Promise<T>, retries = 2, delay = 1000): Promise<T> => {
-  try {
-    return await fn()
-  } catch (err) {
-    if (retries === 0) throw err
-    await new Promise(r => setTimeout(r, delay))
-    return withRetry(fn, retries - 1, delay * 2)
-  }
-}
-
 export const TaskProvider = ({ children }: { children: ReactNode }) => {
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [total, setTotal] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
+  const queryClient = useQueryClient()
+
   const [filters, setFiltersState] = useState<TaskFilters>({
     page: 1,
     limit: 10,
@@ -44,70 +32,63 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 
   const debouncedSearch = useDebounce(filters.search, 400)
 
-  const fetchTasks = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await withRetry(() => TaskApi.getTasks({
-        status: filters.status,
-        page: filters.page,
-        limit: filters.limit,
-        search: debouncedSearch,
-      }))
-      const data: PaginatedResponse<Task> = response.data
-      setTasks(data.data)
-      setTotal(data.total)
-      setTotalPages(data.totalPages)
-    } catch {
-      const msg = 'Unable to reach the server. Please check your connection.'
-      setError(msg)
-      toast.error(msg)
-    } finally {
-      setLoading(false)
-    }
-  }, [filters.status, filters.page, filters.limit, debouncedSearch])
+  const queryKey = ['tasks', filters.status, filters.page, filters.limit, debouncedSearch]
 
-  useEffect(() => {
-    fetchTasks()
-  }, [fetchTasks])
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey,
+    queryFn: () => TaskApi.getTasks({
+      status: filters.status,
+      page: filters.page,
+      limit: filters.limit,
+      search: debouncedSearch,
+    }).then(r => r.data),
+    staleTime: 30000,
+    retry: 2,
+  })
+
+  if (error) toast.error('Unable to reach the server. Please check your connection.')
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
+
+  const createMutation = useMutation({
+    mutationFn: (dto: CreateTaskDto) => TaskApi.createTask(dto),
+    onSuccess: () => { invalidate(); toast.success('Task created') },
+    onError: (err: Error) => { throw err },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateTaskDto }) => TaskApi.updateTask(id, dto),
+    onSuccess: () => { invalidate(); toast.success('Task updated') },
+    onError: (err: Error) => { throw err },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => TaskApi.deleteTask(id),
+    onSuccess: () => { invalidate(); toast.success('Task deleted') },
+    onError: (err: Error) => { throw err },
+  })
 
   const setFilters = (newFilters: Partial<TaskFilters>) => {
     const isPageChange = 'page' in newFilters
     setFiltersState(prev => ({ ...prev, ...newFilters, ...(isPageChange ? {} : { page: 1 }) }))
   }
 
-  const createTask = async (dto: CreateTaskDto) => {
-    await TaskApi.createTask(dto)
-    await fetchTasks()
-    toast.success('Task created')
-  }
-
-  const updateTask = async (id: string, dto: UpdateTaskDto) => {
-    await TaskApi.updateTask(id, dto)
-    await fetchTasks()
-    toast.success('Task updated')
-  }
-
-  const deleteTask = async (id: string) => {
-    await TaskApi.deleteTask(id)
-    await fetchTasks()
-    toast.success('Task deleted')
-  }
+  const paginatedData = data as PaginatedResponse<Task> | undefined
 
   return (
     <TaskContext.Provider value={{
-      tasks,
-      loading,
-      error,
-      total,
-      page: filters.page || 1,
-      totalPages,
+      tasks: paginatedData?.data ?? [],
+      loading: isLoading,
+      error: error ? 'Unable to reach the server. Please check your connection.' : null,
+      total: paginatedData?.total ?? 0,
+      page: filters.page ?? 1,
+      totalPages: paginatedData?.totalPages ?? 0,
       filters,
       setFilters,
-      createTask,
-      updateTask,
-      deleteTask,
-      retryFetch: fetchTasks,
+      createTask: async (dto) => { await createMutation.mutateAsync(dto) },
+      updateTask: async (id, dto) => { await updateMutation.mutateAsync({ id, dto }) },
+      deleteTask: async (id) => { await deleteMutation.mutateAsync(id) },
+      retryFetch: refetch,
     }}>
       {children}
     </TaskContext.Provider>
